@@ -1,5 +1,6 @@
 import { Message } from "../models/message.model.js";
 import { Conversation } from "../models/conversation.model.js";
+import { getReceiverSocketId, io } from "../socket/socket.js";
 
 export const sendMessage = async (req, res) => {
   try {
@@ -26,25 +27,29 @@ export const sendMessage = async (req, res) => {
     if (newMessage) {
       getConversation.messages.push(newMessage._id);
     }
-    await getConversation.save();
+    await Promise.all([getConversation.save(), newMessage.save()]);
 
     //SOCKET.IO
+    const receiverSocketId = getReceiverSocketId(recieverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
 
-    return res.status(200).json({ message: "Message sent successfully" });
+    return res.status(200).json({ newMessage });
   } catch (error) {
     console.log(error.message);
   }
 };
 
-export const getMessage = async (req,res) => {
-    try {
-        const receiverId = req.params.id;
-        const senderId = req.id;
-        const conversation = await Conversation.findOne({
-            participants:{$all : [senderId, receiverId]}
-        }).populate("messages"); 
-        return res.status(200).json(conversation?.messages);
-    } catch (error) {
-        console.log(error);
-    }
-}
+export const getMessage = async (req, res) => {
+  try {
+    const receiverId = req.params.id;
+    const senderId = req.id;
+    const conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] },
+    }).populate("messages");
+    return res.status(200).json(conversation?.messages);
+  } catch (error) {
+    console.log(error);
+  }
+};

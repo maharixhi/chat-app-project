@@ -4,7 +4,6 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { BASE_URL } from "../main";
 
-
 const SignUp = () => {
   const [user, setUser] = useState({
     fullName: "",
